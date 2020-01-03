@@ -1,0 +1,191 @@
+#!/bin/sh
+#
+# jet-certificate-request - collect jet user info and generate a
+# signing key and certificate request
+#
+# Copyright (c) 2015-2018, Juniper Networks, Inc.
+# All rights reserved.
+#
+
+Myname=`basename $0 .sh`
+Mydir=`dirname $0`
+case $Mydir in
+/*) ;;
+*) Mydir=`cd $Mydir && pwd`;;
+esac
+
+. ${ASKSH:-$Mydir/ask.sh}
+
+tf=`mktemp /tmp/tf.XXXXXX`
+
+Certsdir=`cd $Mydir/../certs && pwd`
+if [ ! -d ${CERTSDIR:-/dev/null/empty} ]; then
+    if [ -d $Certsdir ]; then
+	CERTSDIR=$Certsdir
+    else
+	echo "Warning: Cannot find your certs directory (expected to find it in  $Certsdir)."
+	echo "Key and certificate request will be placed in the current working directory."
+	CERTSDIR=.
+    fi
+fi
+
+if [ ! -d "${CERTSDIR}" -o ! -w "${CERTSDIR}" ]; then
+    echo "$CERTSDIR is not a directory or is not writeable"
+    exit 1
+fi
+
+# Create an RSA key suitable for subsequent RSA-certificate operations.
+create_rsa_key () {
+    rc=0
+    if ! openssl genrsa -out ${CERTSDIR}/${CN}_key.pem 2048 > $tf 2>&1; then
+	cat $tf
+	rc=1
+    fi
+    return $rc
+}
+
+# Create a certificate request.
+create_req () {
+    rc=0
+    SUBJ="/C=$CO/ST=$ST/L=$L/O=$O/OU=$OU/CN=$CN/emailAddress=$emailAddress"
+    if ! openssl req -new -key ${CERTSDIR}/${CN}_key.pem -subj "$SUBJ" \
+                    -out ${CERTSDIR}/${CN}_req.pem > $tf 2>&1; then
+	cat $tf
+	rc=1
+    fi
+    return $rc
+}
+
+redo () {
+    echo "Error: $@"
+    echo
+}
+
+# validate the country code
+validate_func () {
+    case $1 in
+    CO)
+	if ! echo "$2" | grep -qi '^[a-z][a-z]$'; then
+	    redo "The country code must consist of two letters."
+	    return 1
+	fi
+	;;
+    CN)
+	if ! echo "$2" | \
+	    grep -q '^[a-z][a-z0-9]*-[a-zA-Z0-9][a-zA-Z0-9_-]*$'; then
+	    redo "The common name you entered does not meet the specification above."
+	    return 1
+	fi
+	;;
+    emailAddress)
+        if ! echo "$2" | \
+	    grep -iq '^[a-z0-9][a-z0-9._+%-]*@[a-z][a-z0-9._-]*[a-z]$'; then
+	    redo "The email address you entered does not appear valid."
+	    return 1
+	fi
+	;;
+    *)
+	if ! echo "$2" | grep -qv '[,/]'; then
+	    redo "This value may not contain a comma or a slash."
+	    return 1
+	fi
+	;;
+    esac
+
+}
+
+validate_func=validate_func
+
+toUpper() {
+        ${TR:-tr} abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ
+}
+
+if ! openssl version >/dev/null 2>&1 ; then
+    echo "This program requires a working version of OpenSSL."
+    echo "Please install OpenSSL and try running this program again."
+fi
+
+cat <<EOF
+
+This program will assist you in creating a signing key and certificate
+request for use with the JUNOS JET.  Please answer the following
+questions, pressing return after each answer.
+
+EOF
+
+echo "Enter the ISO code for the country in which your organization"
+askv CO "is located" "US"
+
+CO=`echo $CO | toUpper`
+
+askv ST "Enter the state in which your organization is located"
+
+askv L "Enter the municipality in which your organization is located"
+
+askv O "Enter the full name of your organization"
+
+askv OU "Enter the name of your organizational unit"
+
+cat <<EOF
+
+You will now need to choose all sections for the common name of your
+certificate.
+  provider prefix: This is the unique provider name assigned by Juniper to each
+      JET partner.
+  user string: This is the string defined by you. It could be project name,
+      product name, or some generic word, like 'dev'.
+  deployment scope: This the string assigned by Juniper to differentiate
+      multiple certificate for the same partner. Leave empty if none was
+      assigned to you.
+  index number: This is an postive integer number used to renew certificate.
+
+EOF
+
+askv CNPREFIX "Enter the provider prefix"
+askv CNSTRING "Enter the user string"
+askv CNDS "Enter the deployment scope (optional, enter to skip)"
+askv CNINDEX "Enter the index number"
+
+if [ -d $CNDS ]; then
+    CN=${CNPREFIX}-${CNSTRING}-${CNINDEX}
+else
+    CN=${CNPREFIX}-${CNSTRING}-${CNDS}-${CNINDEX}
+fi
+
+cat <<EOF
+
+You will now need to choose an email address that will be embedded
+into the certificate.  This email should be the email of an abstract
+entity in the domain of your organization.  It is strongly recommended
+that you *not* use the email address of a particular person.
+
+As an example, all Juniper-issued certificates use the address
+
+ca@juniper.net
+
+('ca' stands for 'Certificate Authority').
+
+EOF
+askv emailAddress "Enter the email address for contact regarding this certificate"
+
+echo "Just a moment while I create your key and certificate request..."
+
+if ! ( create_rsa_key && create_req ); then
+    echo "Error creating keys and/or request.  Please contact Juniper"
+    echo "with the above error messages (if any)."
+    exit 1
+fi
+
+cat <<EOF
+
+The file ${CERTSDIR}/${CN}_key.pem
+contains your JUNOS JET package-signing key.  Ensure that no one
+outside of your development organization has access to it.  Do NOT
+send this file to Juniper.
+
+The file ${CERTSDIR}/${CN}_req.pem
+contains your certificate request. Please forward it to Juniper for
+certificate creation.  Once you receive your certificate, name it
+${CN}.pem and copy it into the ${CERTSDIR} directory.
+
+EOF

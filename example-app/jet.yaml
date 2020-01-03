@@ -1,0 +1,6 @@
+---
+basename: "example"
+comment: "JetEZ GO Example"
+files:
+    - source: hello
+      destination: /var/db/scripts/jet/hello
