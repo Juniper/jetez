@@ -13,9 +13,7 @@ with open('requirements.txt') as f:
 
 setup(name='JetEZ',
       version='0.4',
-      author = "Christian Giese",
-      author_email = "cgiese@juniper.net",
-      url = "https://git.juniper.net/cgiese/JetEZ",
+      url = "https://github.com/Juniper/jetez",
       license = "Juniper Networks Script Software License",
       packages=['jet'],
       install_requires=requirements,
