@@ -43,8 +43,7 @@ ch.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
 log.addHandler(ch)
 
 def main():
-    parser = utils.FileArgumentParser(description=DESCIPTION, formatter_class=argparse.RawDescriptionHelpFormatter,
-                                      epilog="Version: 0.3 Author: Christian Giese <cgiese@juniper.net>")
+    parser = utils.FileArgumentParser(description=DESCIPTION, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument_with_check('--source', dest='source', metavar='DIR', required=True, help="source directory")
     parser.add_argument('-v', '--version', dest='version', type=str, help="version string")
     parser.add_argument_with_check('-k', '--key', dest='key', metavar='FILE', required=True, help="path to signing key")
