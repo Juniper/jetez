@@ -36,7 +36,6 @@ optional arguments:
                         build directory (default: .build)
   -d, --debug           verbose logging
 
-Version: 0.3 Author: Christian Giese <cgiese@juniper.net>
 ```
 
 JetEZ supports to generate signed install packages for OCCAM JunOS only (FreeBSD 10 or newer)!
