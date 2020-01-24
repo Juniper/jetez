@@ -10,8 +10,6 @@
 
 :Organization: Juniper Networks, Inc.
 :Copyright: Copyright (c) 2018, Juniper Networks, Inc. All rights reserved.
-:Author: Christian Giese
-:Contact: cgiese@juniper.net
 :Date: 05/23/2018
 :Version: 0.4
 """
