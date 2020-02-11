@@ -1,6 +1,8 @@
 ---
 basename: "example"
 comment: "JetEZ GO Example"
+arch: "x86"
+abi: "64"
 files:
     - source: hello
       destination: /var/db/scripts/jet/hello
