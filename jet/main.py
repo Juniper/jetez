@@ -72,7 +72,9 @@ def main():
         shutil.rmtree(args.build)
     os.makedirs(args.build)
     os.makedirs('%s/contents' % args.build)
+    os.makedirs('%s/scripts' % args.build)
     contents = "%s/contents/contents" % args.build
+    scripts = "%s/scripts/activate" % args.build
     os.makedirs(contents)
     contents_pkg = '%s/pkg' % contents
     os.makedirs(contents_pkg)
@@ -117,6 +119,17 @@ pkg/manifest.certs uid=0 gid=0 mode=444
     with open(contents_symlink_file, "w") as f:
         f.write(contents_symlink)
 
+    given_scripts_file = os.path.join(args.source, "scripts/activate.sh")
+    init_content = ""
+    with open(given_scripts_file, 'r') as file:
+        init_content = file.read()
+
+    scripts_file = '%s.sh' % scripts
+    log.info("create symlink file %s", scripts_file)
+    with open(scripts_file, "w") as f:
+        f.write(init_content)
+    os.chmod(scripts_file, 0o755)
+
     log.info("sign manifest file %s" % content_manifest_file)
     crypto.sign(content_manifest_file, "%s.sig" % content_manifest_file, args.key, args.cert)
 
@@ -128,13 +141,16 @@ pkg/manifest.certs uid=0 gid=0 mode=444
     shutil.rmtree(contents)
 
     log.info("create package.xml")
-    utils.create_package_xml(project, args.version, package, args.build)
+    utils.create_package_xml(project, version, package, args.build)
 
     package_manifest = "/set package_id=31 role=Provider_Daemon\n"
-    package_manifest_files = ["contents/contents.iso", "contents/contents.symlinks", "package.xml"]
+    package_manifest_files = ["contents/contents.iso", "contents/contents.symlinks", "scripts/activate.sh", "package.xml"]
 
     for f in package_manifest_files:
-        package_manifest += "%s sha1=%s\n" % (f, crypto.generate_sha1(os.path.join(args.build, f)))
+        if "scripts" not in f:
+            package_manifest += "%s sha1=%s\n" % (f, crypto.generate_sha1(os.path.join(args.build, f)))
+        else:
+            package_manifest += "%s sha1=%s program_id=1\n" % (f, crypto.generate_sha1(os.path.join(args.build, f)))
 
     package_manifest_file = os.path.join(args.build, "manifest")
     log.info("create manifest file %s", package_manifest_file)
