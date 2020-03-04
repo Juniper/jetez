@@ -31,6 +31,7 @@ import subprocess
 import shutil
 import yaml
 import sys
+import re
 
 try:
     FileNotFoundError
@@ -101,7 +102,7 @@ def load_project(project_file, version):
     :rtype: dict
     """
     with open(project_file , 'r') as f:
-        project_yaml = yaml.load(f, Loader=yaml.FullLoader)
+        project_yaml = yaml.load(f)
 
     def required(d, k):
         if k in d:
@@ -112,13 +113,13 @@ def load_project(project_file, version):
     timestamp = datetime.datetime.now()
     project = {
         "basename": required(project_yaml, "basename"),
+        "scripts": project_yaml.get("scripts", None),
+        "actions": project_yaml.get("actions", None),
         "files": [],
         "comment": project_yaml.get("comment", "JET app %s" % project_yaml["basename"]),
         "arch": required(project_yaml, "arch"),
         "abi": required(project_yaml, "abi"),
         "copyright": project_yaml.get("copyright", "Copyright %s, Juniper Networks, Inc." % timestamp.year),
-        "mounted-action": project_yaml.get("mounted-action", "scripts/activate.sh"),
-        "deleting-action": project_yaml.get("deleting-action", "scripts/activate.sh"),
         "package_id": project_yaml.get("package_id", 31),
         "role": project_yaml.get("role", "Provider_Daemon"),
         "date": timestamp.strftime("%Y%m%d"),
@@ -188,13 +189,17 @@ def create_package_xml(project, version, package, path):
     etree.SubElement(package_xml, "basename").text = project["basename"]
     etree.SubElement(package_xml, "comment").text = "%s [%s]" % (project["comment"], version)
     etree.SubElement(package_xml, "copyright").text = project["copyright"]
-    etree.SubElement(package_xml, "deleting-action").text = project["deleting-action"]
     etree.SubElement(package_xml, "description").text = project["basename"]
     etree.SubElement(package_xml, "mntname").text = "%s%s-%s" % (project["basename"], project["abi"], binascii.b2a_hex(os.urandom(4)).decode())
-    etree.SubElement(package_xml, "mounted-action").text = project["mounted-action"]
     etree.SubElement(package_xml, "require").text = "junos-runtime32"
     etree.SubElement(package_xml, "version").text = project["date"]
     etree.SubElement(package_xml, "spin").text = project["time"]
+
+    if project['actions'] is not None:
+	act_list = re.split("[, ]", project['actions'])
+	for act in act_list:
+	    etree.SubElement(package_xml, "%s-action"%act).text = "scripts/%s" % project["scripts"]
+
     etree.SubElement(package_xml, "sb-location").text = "JetEZ"
 
     # XMLPKG_TOGGLE_LIST
@@ -205,7 +210,10 @@ def create_package_xml(project, version, package, path):
     dir = etree.SubElement(package_xml, "dir", name="contents")
     package_xml_file("contents/contents.iso")
     package_xml_file("contents/contents.symlinks")
-    dir = etree.SubElement(package_xml, "dir", name="scripts")
-    package_xml_file("scripts/activate.sh")
     with open("%s/package.xml" % path, "w+") as f:
         f.write(etree.tostring(package_xml, pretty_print=True).decode("utf8"))
+    if project['scripts'] is not None:
+        dir = etree.SubElement(package_xml, "dir", name="scripts")
+        package_xml_file("scripts/%s" % project['scripts'])
+        with open("%s/package.xml" % path, "w+") as f:
+            f.write(etree.tostring(package_xml, pretty_print=True).decode("utf8"))

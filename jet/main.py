@@ -72,9 +72,7 @@ def main():
         shutil.rmtree(args.build)
     os.makedirs(args.build)
     os.makedirs('%s/contents' % args.build)
-    os.makedirs('%s/scripts' % args.build)
     contents = "%s/contents/contents" % args.build
-    scripts = "%s/scripts/activate" % args.build
     os.makedirs(contents)
     contents_pkg = '%s/pkg' % contents
     os.makedirs(contents_pkg)
@@ -99,11 +97,16 @@ pkg/manifest.certs uid=0 gid=0 mode=444
         shutil.copy(os.path.join(args.source, f['source']), destination)
         # add file to manifest
         sha1 = crypto.generate_sha1(destination)
-        content_manifest += "%s sha1=%s uid=%s gid=%s mode=%s program_id=%s\n" % \
+        content_manifest += "%s sha1=%s uid=%s gid=%s mode=%s\n" % \
             (f["destination"][1:] if f["destination"][0] == "/" else f["destination"],
-             sha1, f["uid"], f["gid"], f["mode"], f["program_id"])
+             sha1, f["uid"], f["gid"], f["mode"])
         if f["symlink"]:
             contents_symlink += "%s%s %s\n" % (mount_dir, f["destination"], f["destination"])
+    if project["scripts"] is not None:
+        dscripts = os.path.join(args.build, "scripts")
+        os.makedirs(dscripts)
+        log.info("copy file %s to %s/%s", project['scripts'], dscripts, project['scripts'])
+        shutil.copy(os.path.join(args.source, project['scripts']), dscripts)
 
     content_manifest_file = '%s/manifest' % contents_pkg
     log.info("create manifest file %s", content_manifest_file)
@@ -119,17 +122,6 @@ pkg/manifest.certs uid=0 gid=0 mode=444
     with open(contents_symlink_file, "w") as f:
         f.write(contents_symlink)
 
-    given_scripts_file = os.path.join(args.source, "scripts/activate.sh")
-    init_content = ""
-    with open(given_scripts_file, 'r') as file:
-        init_content = file.read()
-
-    scripts_file = '%s.sh' % scripts
-    log.info("create symlink file %s", scripts_file)
-    with open(scripts_file, "w") as f:
-        f.write(init_content)
-    os.chmod(scripts_file, 0o755)
-
     log.info("sign manifest file %s" % content_manifest_file)
     crypto.sign(content_manifest_file, "%s.sig" % content_manifest_file, args.key, args.cert)
 
@@ -144,13 +136,15 @@ pkg/manifest.certs uid=0 gid=0 mode=444
     utils.create_package_xml(project, version, package, args.build)
 
     package_manifest = "/set package_id=31 role=Provider_Daemon\n"
-    package_manifest_files = ["contents/contents.iso", "contents/contents.symlinks", "scripts/activate.sh", "package.xml"]
+    package_manifest_files = ["contents/contents.iso", "contents/contents.symlinks", "package.xml"]
+    if project["scripts"] is not None:
+	package_manifest_files.append("scripts/%s" % project["scripts"])
 
     for f in package_manifest_files:
-        if "scripts" not in f:
-            package_manifest += "%s sha1=%s\n" % (f, crypto.generate_sha1(os.path.join(args.build, f)))
-        else:
+	if f == 'scripts/%s' % project['scripts']:
             package_manifest += "%s sha1=%s program_id=1\n" % (f, crypto.generate_sha1(os.path.join(args.build, f)))
+	else:
+            package_manifest += "%s sha1=%s\n" % (f, crypto.generate_sha1(os.path.join(args.build, f)))
 
     package_manifest_file = os.path.join(args.build, "manifest")
     log.info("create manifest file %s", package_manifest_file)
