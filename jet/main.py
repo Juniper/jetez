@@ -76,12 +76,22 @@ def main():
     os.makedirs(contents)
     contents_pkg = '%s/pkg' % contents
     os.makedirs(contents_pkg)
+    if project["sig"] is not None and project["sig"] == "xsig":
+        sig = project["sig"]
+        certs = "xcerts"
+        sha_bits = "sha256"
+    else:
+        sig = "sig"
+        certs = "certs"
+        sha_bits = "sha1"
+
     content_manifest = """pkg/manifest uid=0 gid=0 mode=444
-pkg/manifest.sha1 uid=0 gid=0 mode=444
-pkg/manifest.sig uid=0 gid=0 mode=444
-pkg/manifest.certs uid=0 gid=0 mode=444
-/set package_id=%s role=%s
-""" % (project["package_id"], project["role"])
+    pkg/manifest.%s uid=0 gid=0 mode=444
+    pkg/manifest.%s uid=0 gid=0 mode=444
+    pkg/manifest.%s uid=0 gid=0 mode=444
+    """ % (sha_bits, sig, certs)
+    if project["sig"] is None:
+        content_manifest +=  "/set package_id=%s role=%s"  % (project["package_id"], project["role"])
     contents_symlink =""
     mount_dir = "/packages/mnt/%s" % project["basename"]
     for f in project["files"]:
@@ -96,10 +106,19 @@ pkg/manifest.certs uid=0 gid=0 mode=444
         # copy file
         shutil.copy(os.path.join(args.source, f['source']), destination)
         # add file to manifest
-        sha1 = crypto.generate_sha1(destination)
-        content_manifest += "%s sha1=%s uid=%s gid=%s mode=%s\n" % \
-            (f["destination"][1:] if f["destination"][0] == "/" else f["destination"],
-             sha1, f["uid"], f["gid"], f["mode"])
+        if project["sig"] is not None and project["sig"] == "xsig":
+            sha = crypto.generate_sha256(destination)
+        else:
+            sha = crypto.generate_sha1(destination)
+        if project["scripts"] is not None and sha_bits == "sha1":
+            content_manifest += "%s %s=%s uid=%s gid=%s mode=%s program_id=%s\n" % \
+                (f["destination"][1:] if f["destination"][0] == "/" else f["destination"],
+                sha_bits, sha, f["uid"], f["gid"], f["mode"], f["program_id"])
+        else:
+            content_manifest += "%s %s=%s uid=%s gid=%s mode=%s\n" % \
+                (f["destination"][1:] if f["destination"][0] == "/" else f["destination"],
+                sha_bits, sha, f["uid"], f["gid"], f["mode"])
+
         if f["symlink"]:
             contents_symlink += "%s%s %s\n" % (mount_dir, f["destination"], f["destination"])
     if project["scripts"] is not None:
@@ -113,9 +132,12 @@ pkg/manifest.certs uid=0 gid=0 mode=444
     with open(content_manifest_file, "w") as f:
         f.write(content_manifest)
 
-    content_manifest_sha_file = '%s/manifest.sha1' % contents_pkg
+    content_manifest_sha_file = '%s/manifest.%s' % (contents_pkg, sha_bits)
     with open(content_manifest_sha_file, "w") as f:
-        f.write("%s\n" % crypto.generate_sha1(content_manifest_file))
+        if project["sig"] is not None and project["sig"] == "xsig":
+            f.write("%s\n" % crypto.generate_sha256(content_manifest_file))
+        else:
+            f.write("%s\n" % crypto.generate_sha1(content_manifest_file))
 
     contents_symlink_file = '%s.symlinks' % contents
     log.info("create symlink file %s", contents_symlink_file)
@@ -123,7 +145,7 @@ pkg/manifest.certs uid=0 gid=0 mode=444
         f.write(contents_symlink)
 
     log.info("sign manifest file %s" % content_manifest_file)
-    crypto.sign(content_manifest_file, "%s.sig" % content_manifest_file, args.key, args.cert)
+    crypto.sign(content_manifest_file, "%s.%s" % (content_manifest_file, sig), args.key, args.cert, sha_bits, certs)
 
     for f in os.listdir(contents_pkg):
         os.chmod(os.path.join(contents_pkg, f), 0o444)
@@ -135,16 +157,21 @@ pkg/manifest.certs uid=0 gid=0 mode=444
     log.info("create package.xml")
     utils.create_package_xml(project, version, package, args.build)
 
-    package_manifest = "/set package_id=31 role=Provider_Daemon\n"
+    if project["sig"] is not None and project["sig"] == "xsig":
+        package_manifest = ""
+    else:
+        package_manifest = "/set package_id=31 role=Provider_Daemon\n"
     package_manifest_files = ["contents/contents.iso", "contents/contents.symlinks", "package.xml"]
     if project["scripts"] is not None:
-	package_manifest_files.append("scripts/%s" % project["scripts"])
+	    package_manifest_files.append("scripts/%s" % project["scripts"])
 
     for f in package_manifest_files:
-	if f == 'scripts/%s' % project['scripts']:
-            package_manifest += "%s sha1=%s program_id=1\n" % (f, crypto.generate_sha1(os.path.join(args.build, f)))
-	else:
-            package_manifest += "%s sha1=%s\n" % (f, crypto.generate_sha1(os.path.join(args.build, f)))
+        if f == 'scripts/%s' % project['scripts'] and sha_bits == "sha1":
+            package_manifest += "%s %s=%s program_id=1\n" % (f, sha_bits, crypto.generate_sha1(os.path.join(args.build, f)))
+        elif sha_bits == "sha256":
+            package_manifest += "%s %s=%s\n" % (f, sha_bits, crypto.generate_sha256(os.path.join(args.build, f)))
+        else:
+            package_manifest += "%s %s=%s\n" % (f, sha_bits, crypto.generate_sha1(os.path.join(args.build, f)))
 
     package_manifest_file = os.path.join(args.build, "manifest")
     log.info("create manifest file %s", package_manifest_file)
@@ -152,7 +179,7 @@ pkg/manifest.certs uid=0 gid=0 mode=444
         f.write(package_manifest)
 
     log.info("sign manifest file %s" % package_manifest_file)
-    crypto.sign(package_manifest_file, "%s.sig" % package_manifest_file, args.key, args.cert)
+    crypto.sign(package_manifest_file, "%s.%s" % (package_manifest_file, sig), args.key, args.cert, sha_bits, certs)
 
     log.info("create %s.tgz" % package)
     utils.create_tgz(package, args.build)

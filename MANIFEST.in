@@ -1,1 +1,2 @@
 include jet/manifest.certs
+include jet/manifest.xcerts

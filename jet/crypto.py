@@ -65,7 +65,7 @@ def generate_sha1(filename):
     return hash.hexdigest()
 
 
-def sign(input, output, key, cert):
+def sign(input, output, key, cert, sha_bits, certs):
     """sign file
 
     :param input: path to input file
@@ -76,12 +76,16 @@ def sign(input, output, key, cert):
     :type key: str
     :param cert: path to public key/cert
     :type cert: str
+    :param sha_bits: sha1 or sha256
+    :type sha_bits: str
+    :param certs: certs or xcerts
+    :type certs: str
     """
     # get subject from certificate
     _subject = subprocess.check_output("openssl x509 -in %s -noout -subject" % cert, shell=True)
     subject = _subject.decode("utf8").split(" ", 1)[1].strip()
     # create signature
-    signature = subprocess.check_output("openssl dgst -sha1 -sign %s %s" % (key, input), shell=True)
+    signature = subprocess.check_output("openssl dgst -%s -sign %s %s" % (sha_bits, key, input), shell=True)
     # create base64 from signature
     signature64 = base64.b64encode(signature).decode("utf8")
     # format signature file
@@ -94,10 +98,10 @@ def sign(input, output, key, cert):
     with open(output, "w+") as f:
         f.write(signature_file)
     # create certificate chain
-    with open("%s/manifest.certs" % os.path.dirname(__file__), "r") as f:
+    with open("%s/manifest.%s" % (os.path.dirname(__file__), certs), "r") as f:
         cert_chain = f.read()
     with open(cert, "r") as f:
         cert_file = f.read()
-    with open("%s/manifest.certs" % os.path.dirname(output), "w+") as f:
+    with open("%s/manifest.%s" % (os.path.dirname(output), certs), "w+") as f:
         f.write(cert_file)
         f.write(cert_chain)
