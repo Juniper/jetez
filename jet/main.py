@@ -86,12 +86,12 @@ def main():
         sha_bits = "sha1"
 
     content_manifest = """pkg/manifest uid=0 gid=0 mode=444
-    pkg/manifest.%s uid=0 gid=0 mode=444
-    pkg/manifest.%s uid=0 gid=0 mode=444
-    pkg/manifest.%s uid=0 gid=0 mode=444
-    """ % (sha_bits, sig, certs)
+pkg/manifest.%s uid=0 gid=0 mode=444
+pkg/manifest.%s uid=0 gid=0 mode=444
+pkg/manifest.%s uid=0 gid=0 mode=444
+""" % (sha_bits, sig, certs)
     if project["sig"] is None:
-        content_manifest +=  "/set package_id=%s role=%s"  % (project["package_id"], project["role"])
+        content_manifest +=  "/set package_id=%s role=%s\n"  % (project["package_id"], project["role"])
     contents_symlink =""
     mount_dir = "/packages/mnt/%s" % project["basename"]
     for f in project["files"]:
