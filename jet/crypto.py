@@ -98,7 +98,7 @@ def sign(input, output, key, cert, sha_bits, certs):
     with open(output, "w+") as f:
         f.write(signature_file)
     # create certificate chain
-    with open("%s/manifest.%s" % (os.path.dirname(__file__), certs), "r") as f:
+    with open("%s/jet-certs.pem" % (os.path.dirname(__file__)), "r") as f:
         cert_chain = f.read()
     with open(cert, "r") as f:
         cert_file = f.read()
