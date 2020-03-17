@@ -102,7 +102,7 @@ def load_project(project_file, version):
     :rtype: dict
     """
     with open(project_file , 'r') as f:
-        project_yaml = yaml.load(f)
+        project_yaml = yaml.load(f, Loader=yaml.FullLoader)
 
     def required(d, k):
         if k in d:
@@ -115,6 +115,7 @@ def load_project(project_file, version):
         "basename": required(project_yaml, "basename"),
         "scripts": project_yaml.get("scripts", None),
         "actions": project_yaml.get("actions", None),
+        "sig": project_yaml.get("sig", None),
         "files": [],
         "comment": project_yaml.get("comment", "JET app %s" % project_yaml["basename"]),
         "arch": required(project_yaml, "arch"),
@@ -197,9 +198,11 @@ def create_package_xml(project, version, package, path):
     etree.SubElement(package_xml, "spin").text = project["time"]
 
     if project['actions'] is not None:
-	act_list = re.split("[, ]", project['actions'])
-	for act in act_list:
-	    etree.SubElement(package_xml, "%s-action"%act).text = "scripts/%s" % project["scripts"]
+        act_list = re.split("[, ]", project['actions'])
+        for act in act_list:
+            print("%s-action"%act)
+            print("scripts/%s" % project["scripts"])
+            etree.SubElement(package_xml, "%s-action"%act).text = "scripts/%s" % project["scripts"]
 
     etree.SubElement(package_xml, "sb-location").text = "JetEZ"
 
