@@ -126,6 +126,8 @@ pkg/manifest.%s uid=0 gid=0 mode=444
         os.makedirs(dscripts)
         log.info("copy file %s to %s/%s", project['scripts'], dscripts, project['scripts'])
         shutil.copy(os.path.join(args.source, project['scripts']), dscripts)
+        script_file = "%s/%s" % (dscripts,project['scripts'])
+        os.chmod(script_file, 0o755)
 
     content_manifest_file = '%s/manifest' % contents_pkg
     log.info("create manifest file %s", content_manifest_file)
