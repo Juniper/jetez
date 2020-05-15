@@ -11,7 +11,7 @@ shows how to build a GO application for JunOS using JetEZ.
 In order to develop and distribute JetEZ applications, you need a package
 [signing certificate](https://www.juniper.net/documentation/en_US/jet19.4/topics/topic-map/jet-app-development-prerequisites.html#id-jet-certificate-request).
 
-```
+```bash
 $ jetez --help
 usage: jetez [-h] --source DIR [-v VERSION] -k FILE -c FILE [-j FILE]
              [-b BUILD] [-d]
