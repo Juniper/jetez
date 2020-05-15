@@ -1,17 +1,15 @@
 # JetEZ - Easy SDK
 
-**BETA**
-
 JetEZ is an easy (EZ) and lightweight alternative to the official JET SDK with some
 limitations. JetEZ creates signed JunOS install packages including any kind of
 files described in a [yaml file](https://github.com/Juniper/jetez/blob/master/docs/jet-yaml.md).
-This allows to install Python and SLAX scripts but also cross compiled binaries.
+This allows to install Python and SLAX scripts and cross compiled binaries.
 
 The [example app](https://github.com/Juniper/jetez/tree/master/example-app)
 shows how to build a GO application for JunOS using JetEZ.
 
 In order to develop and distribute JetEZ applications, you need a package
-[signing certificate](https://www.juniper.net/documentation/en_US/jet1.0/topics/task/jet-app-executing-certificate-request-script.html).
+[signing certificate](https://www.juniper.net/documentation/en_US/jet19.4/topics/topic-map/jet-app-development-prerequisites.html#id-jet-certificate-request).
 
 ```
 $ jetez --help
@@ -38,4 +36,4 @@ optional arguments:
 
 ```
 
-JetEZ supports to generate signed install packages for OCCAM JunOS only (FreeBSD 10 or newer)!
+JetEZ generates signed packages for installation on upgraded JunOS only (FreeBSD 10 or later).
