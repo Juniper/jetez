@@ -110,14 +110,10 @@ pkg/manifest.%s uid=0 gid=0 mode=444
             sha = crypto.generate_sha256(destination)
         else:
             sha = crypto.generate_sha1(destination)
-        if project["scripts"] is not None and sha_bits == "sha1":
-            content_manifest += "%s %s=%s uid=%s gid=%s mode=%s program_id=%s\n" % \
-                (f["destination"][1:] if f["destination"][0] == "/" else f["destination"],
-                sha_bits, sha, f["uid"], f["gid"], f["mode"], f["program_id"])
-        else:
-            content_manifest += "%s %s=%s uid=%s gid=%s mode=%s\n" % \
-                (f["destination"][1:] if f["destination"][0] == "/" else f["destination"],
-                sha_bits, sha, f["uid"], f["gid"], f["mode"])
+
+        content_manifest += "%s %s=%s uid=%s gid=%s mode=%s program_id=%s\n" % \
+            (f["destination"][1:] if f["destination"][0] == "/" else f["destination"],
+            sha_bits, sha, f["uid"], f["gid"], f["mode"], f["program_id"])
 
         if f["symlink"]:
             contents_symlink += "%s%s %s\n" % (mount_dir, f["destination"], f["destination"])
