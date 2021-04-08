@@ -129,6 +129,7 @@ def load_project(project_file, version):
         "config-validate": project_yaml.get("config-validate", False),
         "veriexec-ext": project_yaml.get("veriexec-ext", False),
         "mountlate": project_yaml.get("mountlate", False),
+        "umount-busy": project_yaml.get("umount-busy", False),
     }
     project_yaml_files = required(project_yaml, "files")
     for file in project_yaml_files:
@@ -207,7 +208,7 @@ def create_package_xml(project, version, package, path):
     etree.SubElement(package_xml, "sb-location").text = "JetEZ"
 
     # XMLPKG_TOGGLE_LIST
-    for p in ("schema", "config-validate", "veriexec-ext", "mountlate"):
+    for p in ("schema", "config-validate", "veriexec-ext", "mountlate", "umount-busy"):
         if project[p]:
             etree.SubElement(package_xml, p)
 
