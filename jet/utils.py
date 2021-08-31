@@ -212,6 +212,11 @@ def create_package_xml(project, version, package, path):
         if project[p]:
             etree.SubElement(package_xml, p)
 
+    # Add delete-immediate knob so that when JET Package
+    # is deleted, all symlinks will be deleted too.
+    # This will be enabled for all JetEZ based packages.
+    etree.SubElement(package_xml, "delete-immediate")
+
     dir = etree.SubElement(package_xml, "dir", name="contents")
     package_xml_file("contents/contents.iso")
     package_xml_file("contents/contents.symlinks")
