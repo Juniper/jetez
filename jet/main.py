@@ -104,12 +104,21 @@ pkg/manifest.%s uid=0 gid=0 mode=444
             if not os.path.exists(_d):
                 os.makedirs(_d)
         # copy file
-        shutil.copy(os.path.join(args.source, f['source']), destination)
+        source = os.path.join(args.source, f['source'])
+        shutil.copy(source, destination)
         # add file to manifest
         if project["sig"] is not None and project["sig"] == "xsig":
+            sha_src = crypto.generate_sha256(source)
             sha = crypto.generate_sha256(destination)
         else:
+            sha_src = crypto.generate_sha1(source)
             sha = crypto.generate_sha1(destination)
+
+        if sha != sha_src:
+            log.critical("Checksum mismatch for file %s. %s src %s dst %s:", destination, sha_bits, sha_src, sha)
+            os.exit(1)
+        else:
+            log.info("Checksum for file %s. %s %s:", destination, sha_bits, sha)
 
         content_manifest += "%s %s=%s uid=%s gid=%s mode=%s program_id=%s\n" % \
             (f["destination"][1:] if f["destination"][0] == "/" else f["destination"],
