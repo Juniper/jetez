@@ -153,7 +153,7 @@ def create_contents_iso(input, output):
     :param output: path to output file
     :type output: str
     """
-    subprocess.check_output("mkisofs --rock -sysid JUNOS -o %s %s" % (output, input), shell=True)
+    subprocess.check_output("mkisofs --rock -sysid JUNOS -uid 0 -gid 0 -o %s %s" % (output, input), shell=True)
 
 
 def create_tgz(package, path):
