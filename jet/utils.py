@@ -138,7 +138,7 @@ def load_project(project_file, version):
             "destination": required(file, "destination"),
             "uid": file.get("uid", 0),
             "gid": file.get("gid", 0),
-            "mode": file.get("mode", 555),
+            "mode": file.get("mode", None),
             "program_id": file.get("program_id", 1),
             "symlink": file.get("symlink", True),
         })
